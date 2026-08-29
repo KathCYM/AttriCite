@@ -1,0 +1,41 @@
+{
+  "biomedical_records": 143,
+  "computer_science_records": 7608,
+  "duplicate_release_ids": 0,
+  "expected_split_counts": {
+    "biomedical_test": 143,
+    "test": 299,
+    "train": 350,
+    "validation": 60
+  },
+  "fingerprint_scan_locators": 7751,
+  "forbidden_fields_found": [],
+  "full_dataset_audit": {
+    "decision_counts": {
+      "accept": 7697,
+      "reject": 2,
+      "revise": 55
+    },
+    "records_audited": 7754,
+    "release_ready": true,
+    "unresolved_review_records": 0
+  },
+  "index_locators": 0,
+  "missing_fingerprints": 0,
+  "missing_source_pdf_url": 0,
+  "missing_source_pdf_url_in_experimental_splits": 0,
+  "removed_private_fields": {},
+  "schema_version": 1,
+  "split_counts": {
+    "biomedical_test": 143,
+    "test": 299,
+    "train": 350,
+    "validation": 60
+  },
+  "split_counts_match": true,
+  "total_records": 7751,
+  "year_counts": {
+    "2024": 2401,
+    "2025": 5350
+  }
+}

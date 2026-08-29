@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CiteGuard Frontend</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.4; }
+        label { display: block; margin-top: 10px; }
+        input, textarea { width: 100%; padding: 5px; box-sizing: border-box; }
+        button { margin-top: 15px; padding: 10px 20px; }
+        #output { background:#f0f0f0; padding:10px; height:300px; overflow:auto; white-space:pre-wrap; border-radius: 8px; }
+        .results-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-top: 20px; }
+        .panel { border: 1px solid #ddd; border-radius: 10px; padding: 14px; background: #fafafa; }
+        .panel h2 { margin-top: 0; font-size: 1.05rem; }
+        .placeholder { color: #666; font-style: italic; }
+        .paper-card { border: 1px solid #e1e1e1; border-radius: 8px; padding: 10px; background: white; margin-top: 10px; }
+        .paper-card h3 { margin: 0 0 8px 0; font-size: 1rem; }
+        .paper-meta { margin: 4px 0; color: #444; }
+        .debug-block { margin-top: 12px; white-space: pre-wrap; word-break: break-word; background: #fff7e6; border: 1px solid #f0d9a7; border-radius: 8px; padding: 10px; font-size: 0.9rem; }
+        .paper-buffer-round { margin-top: 14px; }
+        .paper-buffer-round h3 { margin-bottom: 8px; font-size: 0.98rem; }
+        .paper-buffer-list { display: grid; gap: 10px; }
+        .paper-json { white-space: pre-wrap; word-break: break-word; background: white; border: 1px solid #e1e1e1; border-radius: 8px; padding: 10px; }
+        .buffer-controls { display: grid; gap: 10px; margin-top: 10px; }
+        .buffer-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .buffer-toolbar button { margin-top: 0; }
+        .buffer-summary { color: #444; font-size: 0.95rem; }
+        .buffer-list { display: grid; gap: 12px; margin-top: 10px; }
+        .abstract-toggle { margin-top: 10px; }
+        .abstract-toggle summary { cursor: pointer; font-weight: 600; }
+        .abstract-body { margin-top: 8px; }
+        .browser-panel { margin-top: 20px; }
+        .browser-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .browser-controls button, .browser-controls select { margin-top: 0; }
+        .browser-controls select { padding: 8px; }
+        .browser-summary { color: #444; font-size: 0.95rem; }
+    </style>
+</head>
+<body>
+    <h1>CiteGuard Frontend</h1>
+
+    <form id="run-form">
+        <label>Model Name: <input id="model_name" required></label>
+        <label>Excerpt: <textarea id="excerpt"></textarea></label>
+        <label>Dataset: <input id="dataset"></label>
+        <label>Result Path: <input id="result_path" value="results.json"></label>
+        <label>Local Model: <input type="checkbox" id="local_model"></label>
+        <label>ID: <input id="id" value="manual"></label>
+        <label>Source Paper Title: <input id="source_paper_title"></label>
+        <label>Target Paper Title: <input id="target_paper_title"></label>
+        <label>Additional Context: <textarea id="additional_context"></textarea></label>
+        <label>Year: <input id="year" type="number" value="2025"></label>
+        <label>Skip Citations: <input id="skip_citations"></label>
+        <label>Temperature: <input id="temperature" type="number" step="0.01" value="0.95"></label>
+        <div class="browser-controls">
+            <button type="submit">Run</button>
+            <button type="button" id="load-result-path">Load Result Path</button>
+        </div>
+    </form>
+
+    <h2>Output:</h2>
+    <pre id="output"></pre>
+
+    <section class="panel browser-panel">
+        <h2>Result Browser</h2>
+        <div id="result-browser" class="placeholder">Completed results will appear here after the run.</div>
+    </section>
+
+    <div class="results-grid">
+        <section class="panel">
+            <h2>Selected Paper</h2>
+            <div id="selected-paper" class="placeholder">Run a query to see the selected paper.</div>
+        </section>
+
+        <section class="panel">
+            <h2>Paper Buffer</h2>
+            <div id="paper-buffer" class="placeholder">Retrieved paper candidates will appear here after the run.</div>
+        </section>
+    </div>
+
+    <script>
+        const form = document.getElementById("run-form");
+        const output = document.getElementById("output");
+        const selectedPaper = document.getElementById("selected-paper");
+        const paperBuffer = document.getElementById("paper-buffer");
+        const resultBrowser = document.getElementById("result-browser");
+        const loadResultPathButton = document.getElementById("load-result-path");
+        const OUTPUT_CHAR_LIMIT = 60000;
+        let currentResultPath = "results.json";
+        let currentRunId = null;
+        let paperBufferItems = [];
+        let paperBufferSortMode = "discovery";
+        let currentPayload = null;
+        let currentResultIndex = 0;
+        let outputWasTruncated = false;
+
+        function escapeHtml(text) {
+            return String(text ?? "")
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#39;");
+        }
+
+        function resetOutput() {
+            output.textContent = "";
+            outputWasTruncated = false;
+        }
+
+        function appendOutput(text) {
+            if (!text) return;
+            let next = `${output.textContent}${text}`;
+            if (next.length > OUTPUT_CHAR_LIMIT) {
+                next = next.slice(-OUTPUT_CHAR_LIMIT);
+                if (!outputWasTruncated) {
+                    next = `[output truncated to last ${OUTPUT_CHAR_LIMIT} chars]\n${next}`;
+                    outputWasTruncated = true;
+                }
+            }
+            output.textContent = next;
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function findPaperById(bufferRounds, paperId) {
+            if (!paperId || !Array.isArray(bufferRounds)) return null;
+            for (const round of bufferRounds) {
+                if (!Array.isArray(round)) continue;
+                const match = round.find((paper) => paper.paperId === paperId);
+                if (match) return match;
+            }
+            return null;
+        }
+
+        function extractLastSelectedPaperId(text) {
+            const source = String(text ?? "");
+            const patterns = [
+                /"name"\s*:\s*"select"[\s\S]{0,400}?"paper_id"\s*:\s*"([^"]+)"/g,
+                /'name'\s*:\s*'select'[\s\S]{0,400}?'paper_id'\s*:\s*'([^']+)'/g,
+                /"paper_id"\s*:\s*"([^"]+)"/g,
+                /'paper_id'\s*:\s*'([^']+)'/g,
+            ];
+
+            let lastMatch = null;
+            for (const pattern of patterns) {
+                pattern.lastIndex = 0;
+                let match;
+                while ((match = pattern.exec(source)) !== null) {
+                    lastMatch = match[1];
+                }
+                if (lastMatch) {
+                    return lastMatch;
+                }
+            }
+            return null;
+        }
+
+        function extractLastSelectAction(text) {
+            const source = String(text ?? "");
+            const patterns = [
+                /"reason"\s*:\s*"((?:\\.|[^"\\])*)"[\s\S]{0,1200}?"action"\s*:\s*{[\s\S]{0,400}?"name"\s*:\s*"select"[\s\S]{0,400}?"paper_id"\s*:\s*"([^"]+)"/g,
+                /'reason'\s*:\s*'((?:\\.|[^'\\])*)'[\s\S]{0,1200}?'action'\s*:\s*{[\s\S]{0,400}?'name'\s*:\s*'select'[\s\S]{0,400}?'paper_id'\s*:\s*'([^']+)'/g,
+            ];
+
+            let lastMatch = null;
+            for (const pattern of patterns) {
+                pattern.lastIndex = 0;
+                let match;
+                while ((match = pattern.exec(source)) !== null) {
+                    lastMatch = {
+                        reason: match[1]
+                            .replace(/\\"/g, '"')
+                            .replace(/\\'/g, "'")
+                            .replace(/\\n/g, "\n"),
+                        action: {
+                            name: "select",
+                            paper_id: match[2],
+                        },
+                    };
+                }
+                if (lastMatch) {
+                    return lastMatch;
+                }
+            }
+            return null;
+        }
+
+        function inferSelectedPaper(result, bufferRounds, explicitSelected, fallbackText = "") {
+            const history = Array.isArray(result?.history) ? result.history : [];
+            const historyText = history.map((item) => String(item?.content ?? "")).join("\n\n");
+            const historySelectedPaperId = extractLastSelectedPaperId(historyText);
+            const outputSelectedPaperId = extractLastSelectedPaperId(fallbackText);
+            const historySelectAction = extractLastSelectAction(historyText);
+            const outputSelectAction = extractLastSelectAction(fallbackText);
+            const debug = {
+                latestResultStatus: result?.status ?? null,
+                explicitSelectedType: explicitSelected === null ? "null" : typeof explicitSelected,
+                resultSelectedType: result?.selected === null ? "null" : typeof result?.selected,
+                historyLength: history.length,
+                bufferRounds: Array.isArray(bufferRounds) ? bufferRounds.length : 0,
+                dedupedBufferSize: dedupePaperBuffer(bufferRounds).length,
+                historySelectedPaperId,
+                outputSelectedPaperId,
+                historySelectActionPreview: historySelectAction
+                    ? { paper_id: historySelectAction.action?.paper_id ?? null, reason: historySelectAction.reason ?? null }
+                    : null,
+                outputSelectActionPreview: outputSelectAction
+                    ? { paper_id: outputSelectAction.action?.paper_id ?? null, reason: outputSelectAction.reason ?? null }
+                    : null,
+                explicitSelectedPreview: explicitSelected && typeof explicitSelected === "object"
+                    ? { paperId: explicitSelected.paperId ?? null, title: explicitSelected.title ?? null }
+                    : explicitSelected,
+                resultSelectedPreview: result?.selected && typeof result.selected === "object"
+                    ? { paperId: result.selected.paperId ?? null, title: result.selected.title ?? null }
+                    : result?.selected ?? null,
+            };
+
+            if (explicitSelected) {
+                return { paper: explicitSelected, debug: { ...debug, source: "explicitSelectedObject" } };
+            }
+            if (typeof explicitSelected === "string") {
+                const inferred = findPaperById(bufferRounds, explicitSelected);
+                if (inferred) return { paper: inferred, debug: { ...debug, source: "explicitSelectedId" } };
+            }
+            if (result?.selected) {
+                if (typeof result.selected === "string") {
+                    const inferred = findPaperById(bufferRounds, result.selected);
+                    if (inferred) return { paper: inferred, debug: { ...debug, source: "resultSelectedId" } };
+                }
+                return { paper: result.selected, debug: { ...debug, source: "resultSelectedObject" } };
+            }
+
+            const selectedPaperId =
+                historySelectedPaperId ||
+                outputSelectedPaperId;
+
+            if (selectedPaperId) {
+                const inferred = findPaperById(bufferRounds, selectedPaperId);
+                if (inferred) return { paper: inferred, debug: { ...debug, source: "inferredPaperId", selectedPaperId } };
+            }
+
+            for (let i = history.length - 1; i >= 0; i -= 1) {
+                const content = String(history[i]?.content ?? "");
+                const match = content.match(/"name"\s*:\s*"select"[\s\S]*?"paper_id"\s*:\s*"([^"]+)"/);
+                if (match) {
+                    const inferred = findPaperById(bufferRounds, match[1]);
+                    if (inferred) return { paper: inferred, debug: { ...debug, source: "historyRegexFallback", selectedPaperId: match[1] } };
+                }
+            }
+
+            const fallbackSelection = historySelectAction || outputSelectAction || null;
+            if (fallbackSelection) {
+                return {
+                    paper: null,
+                    selectionAction: fallbackSelection,
+                    debug: {
+                        ...debug,
+                        source: historySelectAction ? "historySelectActionFallback" : "outputSelectActionFallback",
+                    },
+                };
+            }
+
+            return { paper: null, selectionAction: null, debug: { ...debug, source: "notFound" } };
+        }
+
+        function renderSelectedPaper(result, bufferRounds = [], explicitSelected = null, fallbackText = "") {
+            const { paper, selectionAction, debug } = inferSelectedPaper(result, bufferRounds, explicitSelected, fallbackText);
+            if (!paper) {
+                if (selectionAction) {
+                    selectedPaper.innerHTML = `
+                        <div class="paper-card">
+                            <h3>Selected From History</h3>
+                            <div class="paper-meta"><strong>Paper ID:</strong> ${escapeHtml(selectionAction.action?.paper_id || "N/A")}</div>
+                            <div class="paper-meta"><strong>Action:</strong> ${escapeHtml(selectionAction.action?.name || "select")}</div>
+                            <div class="paper-meta"><strong>Reason:</strong></div>
+                            <div>${escapeHtml(selectionAction.reason || "No reason available.")}</div>
+                            <div class="paper-meta"><strong>Raw Selection:</strong></div>
+                            <pre class="paper-json">${escapeHtml(JSON.stringify(selectionAction, null, 2))}</pre>
+                        </div>
+                        <details>
+                            <summary>Selected Paper Debug</summary>
+                            <pre class="debug-block">${escapeHtml(JSON.stringify(debug, null, 2))}</pre>
+                        </details>
+                    `;
+                    return;
+                }
+
+                selectedPaper.innerHTML = `
+                    <div class="placeholder">No paper was selected for this run.</div>
+                    <details open>
+                        <summary>Selected Paper Debug</summary>
+                        <pre class="debug-block">${escapeHtml(JSON.stringify(debug, null, 2))}</pre>
+                    </details>
+                `;
+                return;
+            }
+
+            const authors = Array.isArray(paper.authors) && paper.authors.length
+                ? paper.authors.map((author) => author.name).join(", ")
+                : "Unknown";
+            const pdfUrl = paper.openAccessPdf?.url
+                ? `<div class="paper-meta"><strong>PDF:</strong> <a href="${escapeHtml(paper.openAccessPdf.url)}" target="_blank" rel="noreferrer">Open PDF</a></div>`
+                : "";
+
+            selectedPaper.innerHTML = `
+                <div class="paper-card">
+                    <h3>${escapeHtml(paper.title || "Untitled paper")}</h3>
+                    <div class="paper-meta"><strong>Paper ID:</strong> ${escapeHtml(paper.paperId || "N/A")}</div>
+                    <div class="paper-meta"><strong>Authors:</strong> ${escapeHtml(authors)}</div>
+                    <div class="paper-meta"><strong>Venue:</strong> ${escapeHtml(paper.venue || "N/A")}</div>
+                    <div class="paper-meta"><strong>Year:</strong> ${escapeHtml(paper.year || "N/A")}</div>
+                    <div class="paper-meta"><strong>Citation Count:</strong> ${escapeHtml(paper.citationCount || "N/A")}</div>
+                    ${pdfUrl}
+                    <div class="paper-meta"><strong>Abstract:</strong></div>
+                    <div>${escapeHtml(paper.abstract || "No abstract available.")}</div>
+                </div>
+                <details>
+                    <summary>Selected Paper Debug</summary>
+                    <pre class="debug-block">${escapeHtml(JSON.stringify(debug, null, 2))}</pre>
+                </details>
+            `;
+        }
+
+        function dedupePaperBuffer(bufferRounds) {
+            if (!Array.isArray(bufferRounds)) {
+                return [];
+            }
+
+            const deduped = new Map();
+            let discoveryIndex = 0;
+
+            bufferRounds.forEach((round, roundIndex) => {
+                if (!Array.isArray(round)) return;
+
+                round.forEach((paper) => {
+                    const key = paper.paperId || paper.title || `paper-${roundIndex}-${discoveryIndex}`;
+                    if (!deduped.has(key)) {
+                        deduped.set(key, {
+                            ...paper,
+                            rounds: [roundIndex + 1],
+                            discoveryIndex,
+                        });
+                        discoveryIndex += 1;
+                        return;
+                    }
+
+                    const existing = deduped.get(key);
+                    if (!existing.rounds.includes(roundIndex + 1)) {
+                        existing.rounds.push(roundIndex + 1);
+                    }
+                    if (!existing.abstract && paper.abstract) {
+                        existing.abstract = paper.abstract;
+                    }
+                    if ((!existing.citationCount || existing.citationCount === "N/A") && paper.citationCount) {
+                        existing.citationCount = paper.citationCount;
+                    }
+                    if ((!existing.year || existing.year === "N/A") && paper.year) {
+                        existing.year = paper.year;
+                    }
+                });
+            });
+
+            return Array.from(deduped.values());
+        }
+
+        function sortedPaperBufferItems(items) {
+            const copied = [...items];
+            if (paperBufferSortMode === "citation") {
+                copied.sort((a, b) => (Number(b.citationCount) || -1) - (Number(a.citationCount) || -1));
+                return copied;
+            }
+            copied.sort((a, b) => a.discoveryIndex - b.discoveryIndex);
+            return copied;
+        }
+
+        function renderPaperBuffer(bufferRounds) {
+            paperBufferItems = sortedPaperBufferItems(dedupePaperBuffer(bufferRounds));
+
+            if (!paperBufferItems.length) {
+                paperBuffer.innerHTML = '<div class="placeholder">No paper buffer was recorded for this run.</div>';
+                return;
+            }
+
+            const cardsHtml = paperBufferItems.map((paper) => {
+                const authors = Array.isArray(paper.authors) && paper.authors.length
+                    ? paper.authors.map((author) => author.name).join(", ")
+                    : "Unknown";
+                const rounds = Array.isArray(paper.rounds) && paper.rounds.length
+                    ? paper.rounds.join(", ")
+                    : "Unknown";
+                return `
+                    <div class="paper-card">
+                        <h3>${escapeHtml(paper.title || "Untitled paper")}</h3>
+                        <div class="paper-meta"><strong>Paper ID:</strong> ${escapeHtml(paper.paperId || "N/A")}</div>
+                        <div class="paper-meta"><strong>Authors:</strong> ${escapeHtml(authors)}</div>
+                        <div class="paper-meta"><strong>Year:</strong> ${escapeHtml(paper.year || "N/A")}</div>
+                        <div class="paper-meta"><strong>Citation Count:</strong> ${escapeHtml(paper.citationCount || "N/A")}</div>
+                        <div class="paper-meta"><strong>Seen In Rounds:</strong> ${escapeHtml(rounds)}</div>
+                        <details class="abstract-toggle">
+                            <summary>Show Abstract</summary>
+                            <div class="abstract-body">${escapeHtml(paper.abstract || "No abstract available.")}</div>
+                        </details>
+                    </div>
+                `;
+            }).join("");
+
+            paperBuffer.innerHTML = `
+                <div class="buffer-controls">
+                    <div class="buffer-summary">
+                        Showing ${paperBufferItems.length} unique paper(s)
+                        • Sort: ${paperBufferSortMode === "citation" ? "citation count" : "discovery order"}
+                    </div>
+                    <div class="buffer-toolbar">
+                        <button id="paper-buffer-sort" type="button">
+                            ${paperBufferSortMode === "citation" ? "Use Discovery Order" : "Sort by Citation Count"}
+                        </button>
+                    </div>
+                </div>
+                <div class="buffer-list">${cardsHtml}</div>
+            `;
+            const sortButton = document.getElementById("paper-buffer-sort");
+
+            sortButton.addEventListener("click", () => {
+                paperBufferSortMode = paperBufferSortMode === "citation" ? "discovery" : "citation";
+                renderPaperBuffer(bufferRounds);
+            });
+        }
+
+        function getResultsFromPayload(payload) {
+            return Array.isArray(payload?.results) ? payload.results : [];
+        }
+
+        function clampResultIndex(index, results) {
+            if (!results.length) return 0;
+            return Math.min(Math.max(index, 0), results.length - 1);
+        }
+
+        function getResultBrowserLabel(result, index) {
+            const resultId = result?.id || `item-${index + 1}`;
+            const status = result?.status || "unknown";
+            return `${index + 1}. ${resultId} (${status})`;
+        }
+
+        function generateRunId() {
+            if (window.crypto?.randomUUID) {
+                return window.crypto.randomUUID();
+            }
+            return `run-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        }
+
+        function renderResultBrowser(payload) {
+            const results = getResultsFromPayload(payload);
+            if (!results.length) {
+                resultBrowser.innerHTML = '<div class="placeholder">No results are available for browsing.</div>';
+                return;
+            }
+
+            currentResultIndex = clampResultIndex(currentResultIndex, results);
+            const currentResult = results[currentResultIndex];
+            const summary = `Showing result ${currentResultIndex + 1} of ${results.length} • ID: ${currentResult?.id || "N/A"} • Status: ${currentResult?.status || "unknown"}`;
+
+            resultBrowser.innerHTML = `
+                <div class="buffer-controls">
+                    <div class="browser-summary">${escapeHtml(summary)}</div>
+                    <div class="browser-controls">
+                        <button id="browse-prev" type="button" ${currentResultIndex === 0 ? "disabled" : ""}>Previous</button>
+                        <select id="browse-result-select">
+                            ${results.map((result, index) => `
+                                <option value="${index}" ${index === currentResultIndex ? "selected" : ""}>
+                                    ${escapeHtml(getResultBrowserLabel(result, index))}
+                                </option>
+                            `).join("")}
+                        </select>
+                        <button id="browse-next" type="button" ${currentResultIndex === results.length - 1 ? "disabled" : ""}>Next</button>
+                    </div>
+                </div>
+            `;
+
+            const prevButton = document.getElementById("browse-prev");
+            const nextButton = document.getElementById("browse-next");
+            const select = document.getElementById("browse-result-select");
+
+            prevButton.addEventListener("click", () => {
+                currentResultIndex = clampResultIndex(currentResultIndex - 1, results);
+                renderCurrentResultView();
+            });
+
+            nextButton.addEventListener("click", () => {
+                currentResultIndex = clampResultIndex(currentResultIndex + 1, results);
+                renderCurrentResultView();
+            });
+
+            select.addEventListener("change", (event) => {
+                currentResultIndex = clampResultIndex(Number(event.target.value), results);
+                renderCurrentResultView();
+            });
+        }
+
+        function renderCurrentResultView() {
+            const results = getResultsFromPayload(currentPayload);
+            if (!results.length) {
+                resultBrowser.innerHTML = '<div class="placeholder">No results are available for browsing.</div>';
+                selectedPaper.innerHTML = '<div class="placeholder">Run a query to see the selected paper.</div>';
+                paperBuffer.innerHTML = '<div class="placeholder">Retrieved paper candidates will appear here after the run.</div>';
+                return;
+            }
+
+            currentResultIndex = clampResultIndex(currentResultIndex, results);
+            const currentResult = results[currentResultIndex];
+            const bufferRounds = currentResult?.papers || [];
+            const explicitSelected = currentResult?.selected ?? (results.length === 1 ? currentPayload?.selected ?? null : null);
+
+            renderResultBrowser(currentPayload);
+            renderSelectedPaper(currentResult, bufferRounds, explicitSelected, output.textContent);
+            renderPaperBuffer(bufferRounds);
+        }
+
+        function renderFinalPayload(payload, preferredIndex = null) {
+            currentPayload = payload;
+            currentRunId = payload?.run_id || currentRunId;
+            const results = getResultsFromPayload(payload);
+            currentResultIndex = clampResultIndex(preferredIndex ?? (results.length ? results.length - 1 : 0), results);
+            renderCurrentResultView();
+        }
+
+        async function loadSavedResult(path, runId = null) {
+            const query = runId
+                ? `/result_json?run_id=${encodeURIComponent(runId)}`
+                : `/result_json?path=${encodeURIComponent(path)}`;
+            const response = await fetch(query);
+            if (!response.ok) {
+                throw new Error(`Could not load saved result (${response.status})`);
+            }
+
+            const data = await response.json();
+            renderFinalPayload(data);
+        }
+
+        async function loadLatestResult(runId = null) {
+            const query = runId
+                ? `/latest_result?run_id=${encodeURIComponent(runId)}`
+                : "/latest_result";
+            const response = await fetch(query);
+            if (!response.ok) {
+                throw new Error(`Could not load latest result (${response.status})`);
+            }
+
+            const payload = await response.json();
+            renderFinalPayload(payload);
+        }
+
+        loadResultPathButton.addEventListener("click", async () => {
+            currentRunId = null;
+            currentPayload = null;
+            currentResultIndex = 0;
+            currentResultPath = document.getElementById("result_path").value || "results.json";
+            resetOutput();
+            resultBrowser.innerHTML = '<div class="placeholder">Loading saved results...</div>';
+            selectedPaper.innerHTML = '<div class="placeholder">Loading selected paper...</div>';
+            paperBuffer.innerHTML = '<div class="placeholder">Loading paper buffer...</div>';
+
+            try {
+                await loadSavedResult(currentResultPath);
+                appendOutput(`[loaded result file] ${currentResultPath}\n`);
+            } catch (error) {
+                appendOutput(`[result load error] ${error}\n`);
+                resultBrowser.innerHTML = '<div class="placeholder">Could not load the requested result path.</div>';
+                selectedPaper.innerHTML = '<div class="placeholder">No selected paper is available.</div>';
+                paperBuffer.innerHTML = '<div class="placeholder">No paper buffer is available.</div>';
+            }
+        });
+
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+            resetOutput();
+            currentRunId = generateRunId();
+            currentPayload = null;
+            currentResultIndex = 0;
+            resultBrowser.innerHTML = '<div class="placeholder">Running query...</div>';
+            selectedPaper.innerHTML = '<div class="placeholder">Running query...</div>';
+            paperBuffer.innerHTML = '<div class="placeholder">Waiting for search results...</div>';
+            currentResultPath = document.getElementById("result_path").value || "results.json";
+
+            const data = {
+                model_name: document.getElementById("model_name").value,
+                excerpt: document.getElementById("excerpt").value,
+                dataset: document.getElementById("dataset").value || null,
+                result_path: currentResultPath,
+                run_id: currentRunId,
+                local_model: document.getElementById("local_model").checked,
+                id: document.getElementById("id").value || "manual",
+                source_paper_title: document.getElementById("source_paper_title").value,
+                target_paper_title: document.getElementById("target_paper_title").value,
+                additional_context: document.getElementById("additional_context").value,
+                year: parseInt(document.getElementById("year").value) || 2025,
+                skip_citations: document.getElementById("skip_citations").value,
+                temperature: parseFloat(document.getElementById("temperature").value) || 0.95
+            };
+
+            if (!data.dataset && !String(data.excerpt || "").trim()) {
+                appendOutput("[validation error] Provide either an Excerpt or a Dataset path.\n");
+                resultBrowser.innerHTML = '<div class="placeholder">Waiting for a valid request.</div>';
+                selectedPaper.innerHTML = '<div class="placeholder">Provide either an excerpt or a dataset to run.</div>';
+                paperBuffer.innerHTML = '<div class="placeholder">Provide either an excerpt or a dataset to run.</div>';
+                return;
+            }
+
+            const response = await fetch("/run_stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = "";
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop();
+
+                for (const line of lines) {
+                    if (line.startsWith("__FINAL_PAYLOAD__=")) {
+                        try {
+                            const payload = JSON.parse(line.slice("__FINAL_PAYLOAD__=".length));
+                            renderFinalPayload(payload);
+                        } catch (error) {
+                            appendOutput(`[payload parse error] ${error}\n`);
+                        }
+                    } else {
+                        appendOutput(line + "\n");
+                    }
+                }
+            }
+
+            if (buffer) {
+                if (buffer.startsWith("__FINAL_PAYLOAD__=")) {
+                    try {
+                        const payload = JSON.parse(buffer.slice("__FINAL_PAYLOAD__=".length));
+                        renderFinalPayload(payload);
+                    } catch (error) {
+                        appendOutput(`[payload parse error] ${error}\n`);
+                    }
+                } else {
+                    appendOutput(buffer);
+                }
+            }
+
+            try {
+                await loadLatestResult(currentRunId);
+            } catch (latestError) {
+                appendOutput(`[latest result load error] ${latestError}\n`);
+                try {
+                    await loadSavedResult(currentResultPath, currentRunId);
+                } catch (savedError) {
+                    appendOutput(`[result load error] ${savedError}\n`);
+                    try {
+                        const debugResponse = await fetch(`/debug_state?run_id=${encodeURIComponent(currentRunId)}`);
+                        const debugData = await debugResponse.json();
+                        appendOutput(`[debug_state] ${JSON.stringify(debugData)}\n`);
+                    } catch (debugError) {
+                        appendOutput(`[debug_state error] ${debugError}\n`);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

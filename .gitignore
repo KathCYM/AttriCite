@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Generated collection artifacts. Public metadata must be exported explicitly.
+training_data_collection/cache/
+training_data_collection/output/
+training_data_collection/splits/*.csv
+training_data_collection/splits/*.xlsx
+training_data_collection/splits/*.json
+training_data_collection/reconstructed/
+
+# Training products and model weights
+checkpoints/
+training/verl/data/
+training/verl/rollouts/
+training/verl/validation_rollouts/
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+
+# Experiment output and local logs
+outputs/
+raw_logs/
+results_v2/
+*.log
+*.log.tmp
+slurm-*.out
+slurm-*.err
+*.zip
+
+# Local paper drafts and one-off analysis artifacts
+.web_runs/
+AttriCite_NeurIPS_2026*/
+_AI_Native_Academia_NeurIPS_2026*/
+_NeurIPS_2026_Workshop*/
+latex/
+DATASET.csv
+0.jsonl
+4o-agent-retry.json
+agent.py.tmp
+review-report.md
+CiteGuard-v2-illustration.pdf
+results.json
+results/base_vs_step475_paired.csv
+
+# Paper build products and OS/editor files
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+node_modules/
+docs/ABLATION_HANDOFF.md
+training_data_collection/audited/

@@ -1,0 +1,2 @@
+- name: citeguard_agent
+  _target_: training.verl.citeguard_agent_loop.CiteGuardAgentLoop

@@ -1,0 +1,207 @@
+You are given an excerpt from a paper, where a citation was deleted. I'm trying to find the citation (ignore the word [CITATION], that's just where the citation was deleted from. You will be asked to help me find the paper from which the citation was deleted. You are equipped with the following tools that will help you in your task: you can search, you can select to find a keyword in a paper from the search results, or you can select a paper as your final answer.
+
+
+<FORMAT_INSTRUCTIONS>
+
+Your responses have to include one of the actions above.
+Before you take any action, provide your thoughts for doing so.
+Do not include anything other than your thoughts and an action in your responses. You must include exactly one action in your responses.
+
+Keep in mind that you can only find keyword in papers or select papers after you search. You can always search, and then search again. You can also find different keywords in a few papers consecutively, without searching again (as long as the papers appeared in your last search). 
+
+If your search does not return any relevant results, please try the following:
+1. Adjust your query to focus on individual parts of the claim separately, rather than the entire sentence. It is likely that the citation supports only the immediate preceding concept, not the full claim. Use simpler, more general search queries with fewer words (around 3). 
+2. Avoid overly specific or plural terms—use base forms of key concepts to improve match quality. For example, "We apply contrastive learning to improve the representation quality of a ResNet-based encoder [CITATION].", the citation is most likely for ResNet instead of covering both contrastive learning and ResNet.
+3. Change to search by text snippets. You should respond with the following, and use the paper title to do subsequent search:
+{
+    "reason": "Due to the unsuccessful paper search, let's search by text snippets instead",
+    "action": {
+        "name": "search_text_snippet",
+        "query": "ILSVRC 2014"
+    }
+}
+You will then be given the following input:
+- Title: Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition
+  Section: Abstract
+  Snippet: In ImageNet Large Scale Visual Recognition Challenge (ILSVRC) 2014, our methods rank #2 in object detection and #3 in image classification among all 38 teams.
+
+Note: You should first ask for more context in the excerpt, if you are not sure which part of the claim the citation is supporting.
+
+-----------------------------------------------------
+Here's an example of a search query, given an excerpt:
+
+The excerpt is from paper title "Learning Deep Features for Discriminative Localization":
+In this section, we evaluate the localization ability of CAM when trained on the ILSVRC 2014 benchmark dataset [CITATION]
+
+You would respond with:
+{
+    "reason": "The excerpt is not sufficient to determine whether the citation refers to the ILSVRC 2014 benchmark dataset or the CAM's localization ability. Let's ask for more context to clarify the scope of the citation.",
+    "action": {
+        "name": "ask_for_more_context",
+	"query": "In this section, we evaluate the localization ability of CAM when trained on the ILSVRC 2014 benchmark dataset [CITATION]"
+	"paper_title": "Learning Deep Features for Discriminative Localization"
+    }
+}
+
+You will then be given the following input:
+3. Weakly-supervised Object Localization
+In this section, we evaluate the localization ability of CAM when trained on the ILSVRC 2014 benchmark dataset [20]. We first describe the experimental setup and the various CNNs used in Sec. 3.1. Then, in Sec. 3.2 we verify that our technique does not adversely impact the classification performance when learning to localize and provide detailed results on weakly-supervised object localization.
+
+You would respond with:
+{
+    "reason": "With the additional context, it is now clear that the citation refers specifically to the ILSVRC 2014 benchmark dataset. The cited paper seems to be the ImageNet dataset paper. We’ll do a search to make sure.",
+    "action": {
+        "name": "search_citation_count",
+        "query": "ILSVRC 2014 benchmark"
+    }
+}
+
+
+You will then be given the following input:
+- Paper ID: cbb19236820a96038d000dc629225d36e0b6294a
+   Title: Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition
+   Abstract: None
+   Citation Count: 9624
+
+- Paper ID: 0cae491292feccbc9ad1d864cf8b7144923ce6de
+   Title: A Scale Adaptive Kernel Correlation Filter Tracker with Feature Integration
+   Abstract: None
+   Citation Count: 1346
+
+- Paper ID: 425ab097fc695265c3361d39d1f9a07a810fd595
+   Title: Problem Definitions and Evaluation Criteria for the CEC 2014 Special Session and Competition on Single Objective Real-Parameter Numerical Optimization
+   Abstract: Research on the single objective optimization algorithms is the basis of the research on the more complex optimization algorithms such as multi-objective optimizations algorithms, niching algorithms, constrained optimization algorithms and so on. All new evolutionary and swarm algorithms are tested on single objective benchmark problems. In addition, these single objective benchmark problems can be transformed into dynamic, niching composition, computationally expensive and many other classes of problems. In the recent years various kinds of novel optimization algorithms have been proposed to solve real-parameter optimization problems, including the CEC'05 and CEC'13 Special Session on Real-Parameter Optimization [1][2]. Considering the comments on the CEC'13 test suite, we organize a new competition on real parameter single objective optimization. For this competition, we are developing benchmark problems with several novel features such as novel basic problems, composing test problems by extracting features dimension-wise from several problems, graded level of linkages, rotated trap problems, and so on. This competition excludes usage of surrogates or meta-models. There is a sub-competition to test the algorithms with a very small number of function evaluations in order emulate the computationally expensive optimization scenario. This sub-competition encourages the usage of surrogates and other approximation approaches. This special session is devoted to the approaches, algorithms and techniques for solving real parameter single objective optimization without making use of the exact equations of the test functions. We encourage all researchers to test their algorithms on the CEC'14 test suite which includes 30 benchmark functions. The participants are required to send the final results in the format specified in the technical report to the organizers. The organizers will present an overall analysis and comparison based on these results. We will also use statistical tests on convergence performance to compare algorithms that generate similar final solutions eventually. Papers on novel concepts that help us in understanding problem characteristics are also welcome.
+   Citation Count: 1329
+
+- Paper ID: c333778104f648c385b4631f7b4a859787e9d3d3
+   Title: A SICK cure for the evaluation of compositional distributional semantic models
+   Abstract: Shared and internationally recognized benchmarks are fundamental for the development of any computational system. We aim to help the research community working on compositional distributional semantic models (CDSMs) by providing SICK (Sentences Involving Compositional Knowldedge), a large size English benchmark tailored for them. SICK consists of about 10,000 English sentence pairs that include many examples of the lexical, syntactic and semantic phenomena that CDSMs are expected to account for, but do not require dealing with other aspects of existing sentential data sets (idiomatic multiword expressions, named entities, telegraphic language) that are not within the scope of CDSMs. By means of crowdsourcing techniques, each pair was annotated for two crucial semantic tasks: relatedness in meaning (with a 5-point rating scale as gold score) and entailment relation between the two elements (with three possible gold labels: entailment, contradiction, and neutral). The SICK data set was used in SemEval-2014 Task 1, and it freely available for research purposes.
+   Citation Count: 775
+
+- Paper ID: 80c3b84fddd0ddece79500af5e1afbd2b40e7ef8
+   Title: CDnet 2014: An Expanded Change Detection Benchmark Dataset
+   Abstract: Change detection is one of the most important lowlevel tasks in video analytics. In 2012, we introduced the changedetection.net (CDnet) benchmark, a video dataset devoted to the evalaution of change and motion detection approaches. Here, we present the latest release of the CDnet dataset, which includes 22 additional videos (70; 000 pixel-wise annotated frames) spanning 5 new categories that incorporate challenges encountered in many surveillance settings. We describe these categories in detail and provide an overview of the results of more than a dozen methods submitted to the IEEE Change DetectionWorkshop 2014. We highlight strengths and weaknesses of these methods and identify remaining issues in change detection.
+   Citation Count: 753
+
+- Paper ID: 3c74b636c0f74c1a0cbbd6e165c2760264044971
+   Title: The Visual Object Tracking VOT2014 Challenge Results
+   Abstract: None
+   Citation Count: 508
+
+- Paper ID: 4328ec9d98eff5d7eb70997f76d81b27849f3220
+   Title: Scalable, High-Quality Object Detection
+   Abstract: Current high-quality object detection approaches use the scheme of salience-based object proposal methods followed by post-classification using deep convolutional features. This spurred recent research in improving object proposal methods. However, domain agnostic proposal generation has the principal drawback that the proposals come unranked or with very weak ranking, making it hard to trade-off quality for running time. This raises the more fundamental question of whether high-quality proposal generation requires careful engineering or can be derived just from data alone. We demonstrate that learning-based proposal methods can effectively match the performance of hand-engineered methods while allowing for very efficient runtime-quality trade-offs. Using the multi-scale convolutional MultiBox (MSC-MultiBox) approach, we substantially advance the state-of-the-art on the ILSVRC 2014 detection challenge data set, with $0.5$ mAP for a single model and $0.52$ mAP for an ensemble of two models. MSC-Multibox significantly improves the proposal quality over its predecessor MultiBox~method: AP increases from $0.42$ to $0.53$ for the ILSVRC detection challenge. Finally, we demonstrate improved bounding-box recall compared to Multiscale Combinatorial Grouping with less proposals on the Microsoft-COCO data set.
+   Citation Count: 359
+
+- Paper ID: 0b202f2f9fe827148b77badbae80948b3088eef4
+   Title: The global information technology report 2014
+   Abstract: Executive summary When The Global Information Technology Report (GITR) and the Networked Readiness Index (NRI) were created more than 13 years ago, the attention of decision makers was focused on how to develop strategies that would allow them to benefit from what Time Magazine had described as “the new economy”: a new way of organizing and managing economic activity based on the new opportunities that the Internet provided for businesses. At present, the world is slowly emerging from one of the worst financial and economic crises in decades, and policymakers, business leaders, and civil society are looking into new opportunities that can consolidate growth, generate new employment, and create business opportunities. Information and communication technologies (ICTs) continue to rank high on the list as one of the key sources of new opportunities to foster innovation and boost economic and social prosperity, for both advanced and emerging economies. For more than 13 years, the NRI has provided decision makers with a useful conceptual framework to evaluate the impact of ICTs at a global level and to benchmark the ICT readiness and usage of their economies.
+   Citation Count: 239
+
+- Paper ID: c512bc16b5635822d233a334767bb3c554027925
+   Title: Static and Moving Object Detection Using Flux Tensor with Split Gaussian Models
+   Abstract: In this paper, we present a moving object detection system named Flux Tensor with Split Gaussian models (FTSG) that exploits the benefits of fusing a motion computation method based on spatio-temporal tensor formulation, a novel foreground and background modeling scheme, and a multi-cue appearance comparison. This hybrid system can handle challenges such as shadows, illumination changes, dynamic background, stopped and removed objects. Extensive testing performed on the CVPR 2014 Change Detection benchmark dataset shows that FTSG outperforms state-of-the-art methods.
+   Citation Count: 223
+
+- Paper ID: 15e28e884fb6c7eba2610e3dfcd5b40dadb14155
+   Title: DeepID-Net: multi-stage and deformable deep convolutional neural networks for object detection
+   Abstract: In this paper, we propose multi-stage and deformable deep convolutional neural networks for object detection. This new deep learning object detection diagram has innovations in multiple aspects. In the proposed new deep architecture, a new deformation constrained pooling (defpooling) layer models the deformation of object parts with geometric constraint and penalty. With the proposed multistage training strategy, multiple classifiers are jointly optimized to process samples at different difficulty levels. A ne w pre-training strategy is proposed to learn feature represe ntations more suitable for the object detection task and with good generalization capability. By changing the net structures, training strategies, adding and removing some key components in the detection pipeline, a set of models with large diversity are obtained, which significantly improves the effectiveness of modeling averaging. The proposed approach ranked #2 in ILSVRC 2014. It improves the mean averaged precision obtained by RCNN, which is the stateof-the-art of object detection, from31% to 45%. Detailed component-wise analysis is also provided through extensiv e experimental evaluation.
+   Citation Count: 153
+
+
+You would then reply:
+{
+    "reason": "Paper cbb19236820a96038d000dc629225d36e0b6294a seems to directly mention the ILSVRC 2014 benchmark in the abstract. Though we can use ILSVRC 2014 as the query, but fewer words is better, so we only use ILSVRC as the query.",
+    "action": {
+        "name": "find_in_text",
+        "paper_id": "cbb19236820a96038d000dc629225d36e0b6294a"
+        "query": "ILSVRC"
+    }
+}
+
+
+You would then be given the following input:
+Based on this work, we attended the competition of ILSVRC 2014 [26]
+
+You would then reply:
+{
+    "reason": "Based on the text from the paper “Based on this work, we attended the competition of ILSVRC 2014 [26]”, we go to the paper cited at [26] and find its title: ImageNet Large Scale Visual Recognition Challenge.",
+    "action": {
+      "name": "search_citation_count",
+      "query": "ImageNet Large Scale Visual Recognition Challenge"
+    }
+}
+
+
+You would then receive the following input:
+- Paper ID: eb42cf88027de515750f230b23b1a057dc782108
+   Title: Very Deep Convolutional Networks for Large-Scale Image Recognition
+   Abstract: In this work we investigate the effect of the convolutional network depth on its accuracy in the large-scale image recognition setting. Our main contribution is a thorough evaluation of networks of increasing depth using an architecture with very small (3x3) convolution filters, which shows that a significant improvement on the prior-art configurations can be achieved by pushing the depth to 16-19 weight layers. These findings were the basis of our ImageNet Challenge 2014 submission, where our team secured the first and the second places in the localisation and classification tracks respectively. We also show that our representations generalise well to other datasets, where they achieve state-of-the-art results. We have made our two best-performing ConvNet models publicly available to facilitate further research on the use of deep visual representations in computer vision.
+   Citation Count: 88717
+
+- Paper ID: d2c733e34d48784a37d717fe43d9e93277a8c53e
+   Title: ImageNet: A large-scale hierarchical image database
+   Abstract: The explosion of image data on the Internet has the potential to foster more sophisticated and robust models and algorithms to index, retrieve, organize and interact with images and multimedia data. But exactly how such data can be harnessed and organized remains a critical problem. We introduce here a new database called “ImageNet”, a large-scale ontology of images built upon the backbone of the WordNet structure. ImageNet aims to populate the majority of the 80,000 synsets of WordNet with an average of 500-1000 clean and full resolution images. This will result in tens of millions of annotated images organized by the semantic hierarchy of WordNet. This paper offers a detailed analysis of ImageNet in its current state: 12 subtrees with 5247 synsets and 3.2 million images in total. We show that ImageNet is much larger in scale and diversity and much more accurate than the current image datasets. Constructing such a large-scale database is a challenging task. We describe the data collection scheme with Amazon Mechanical Turk. Lastly, we illustrate the usefulness of ImageNet through three simple applications in object recognition, image classification and automatic object clustering. We hope that the scale, accuracy, diversity and hierarchical structure of ImageNet can offer unparalleled opportunities to researchers in the computer vision community and beyond.
+   Citation Count: 52920
+
+- Paper ID: e15cf50aa89fee8535703b9f9512fca5bfc43327
+   Title: Going deeper with convolutions
+   Abstract: We propose a deep convolutional neural network architecture codenamed Inception that achieves the new state of the art for classification and detection in the ImageNet Large-Scale Visual Recognition Challenge 2014 (ILSVRC14). The main hallmark of this architecture is the improved utilization of the computing resources inside the network. By a carefully crafted design, we increased the depth and width of the network while keeping the computational budget constant. To optimize quality, the architectural decisions were based on the Hebbian principle and the intuition of multi-scale processing. One particular incarnation used in our submission for ILSVRC14 is called GoogLeNet, a 22 layers deep network, the quality of which is assessed in the context of classification and detection.
+   Citation Count: 39686
+
+- Paper ID: e74f9b7f8eec6ba4704c206b93bc8079af3da4bd
+   Title: ImageNet Large Scale Visual Recognition Challenge
+   Abstract: None
+   Citation Count: 35026
+
+- Paper ID: cbb19236820a96038d000dc629225d36e0b6294a
+   Title: Spatial Pyramid Pooling in Deep Convolutional Networks for Visual Recognition
+   Abstract: None
+   Citation Count: 9630
+
+- Paper ID: f01fc808592ea7c473a69a6e7484040a435f36d9
+   Title: Long-term recurrent convolutional networks for visual recognition and description
+   Abstract: Models based on deep convolutional networks have dominated recent image interpretation tasks; we investigate whether models which are also recurrent, or “temporally deep”, are effective for tasks involving sequences, visual and otherwise. We develop a novel recurrent convolutional architecture suitable for large-scale visual learning which is end-to-end trainable, and demonstrate the value of these models on benchmark video recognition tasks, image description and retrieval problems, and video narration challenges. In contrast to current models which assume a fixed spatio-temporal receptive field or simple temporal averaging for sequential processing, recurrent convolutional models are “doubly deep” in that they can be compositional in spatial and temporal “layers”. Such models may have advantages when target concepts are complex and/or training data are limited. Learning long-term dependencies is possible when nonlinearities are incorporated into the network state updates. Long-term RNN models are appealing in that they directly can map variable-length inputs (e.g., video frames) to variable length outputs (e.g., natural language text) and can model complex temporal dynamics; yet they can be optimized with backpropagation. Our recurrent long-term models are directly connected to modern visual convnet models and can be jointly trained to simultaneously learn temporal dynamics and convolutional perceptual representations. Our results show such models have distinct advantages over state-of-the-art models for recognition or generation which are separately defined and/or optimized.
+   Citation Count: 5726
+
+- Paper ID: 1109b663453e78a59e4f66446d71720ac58cec25
+   Title: OverFeat: Integrated Recognition, Localization and Detection using Convolutional Networks
+   Abstract: We present an integrated framework for using Convolutional Networks for classification, localization and detection. We show how a multiscale and sliding window approach can be efficiently implemented within a ConvNet. We also introduce a novel deep learning approach to localization by learning to predict object boundaries. Bounding boxes are then accumulated rather than suppressed in order to increase detection confidence. We show that different tasks can be learned simultaneously using a single shared network. This integrated framework is the winner of the localization task of the ImageNet Large Scale Visual Recognition Challenge 2013 (ILSVRC2013) and obtained very competitive results for the detection and classifications tasks. In post-competition work, we establish a new state of the art for the detection task. Finally, we release a feature extractor from our best model called OverFeat.
+   Citation Count: 4838
+
+- Paper ID: b8de958fead0d8a9619b55c7299df3257c624a96
+   Title: DeCAF: A Deep Convolutional Activation Feature for Generic Visual Recognition
+   Abstract: We evaluate whether features extracted from the activation of a deep convolutional network trained in a fully supervised fashion on a large, fixed set of object recognition tasks can be repurposed to novel generic tasks. Our generic tasks may differ significantly from the originally trained tasks and there may be insufficient labeled or unlabeled data to conventionally train or adapt a deep architecture to the new tasks. We investigate and visualize the semantic clustering of deep convolutional features with respect to a variety of such tasks, including scene recognition, domain adaptation, and fine-grained recognition challenges. We compare the efficacy of relying on various network levels to define a fixed feature, and report novel results that significantly outperform the state-of-the-art on several important vision challenges. We are releasing DeCAF, an open-source implementation of these deep convolutional activation features, along with all associated network parameters to enable vision researchers to be able to conduct experimentation with deep representations across a range of visual concept learning paradigms.
+   Citation Count: 4781
+
+- Paper ID: c08f5fa876181fc040d76c75fe2433eee3c9b001
+   Title: Learning and Transferring Mid-level Image Representations Using Convolutional Neural Networks
+   Abstract: Convolutional neural networks (CNN) have recently shown outstanding image classification performance in the large- scale visual recognition challenge (ILSVRC2012). The success of CNNs is attributed to their ability to learn rich mid-level image representations as opposed to hand-designed low-level features used in other image classification methods. Learning CNNs, however, amounts to estimating millions of parameters and requires a very large number of annotated image samples. This property currently prevents application of CNNs to problems with limited training data. In this work we show how image representations learned with CNNs on large-scale annotated datasets can be efficiently transferred to other visual recognition tasks with limited amount of training data. We design a method to reuse layers trained on the ImageNet dataset to compute mid-level image representation for images in the PASCAL VOC dataset. We show that despite differences in image statistics and tasks in the two datasets, the transferred representation leads to significantly improved results for object and action classification, outperforming the current state of the art on Pascal VOC 2007 and 2012 datasets. We also show promising results for object and action localization.
+   Citation Count: 3092
+
+- Paper ID: 4aa4069693bee00d1b0759ca3df35e59284e9845
+   Title: DeViSE: A Deep Visual-Semantic Embedding Model
+   Abstract: Modern visual recognition systems are often limited in their ability to scale to large numbers of object categories. This limitation is in part due to the increasing difficulty of acquiring sufficient training data in the form of labeled images as the number of object categories grows. One remedy is to leverage data from other sources - such as text data - both to train visual models and to constrain their predictions. In this paper we present a new deep visual-semantic embedding model trained to identify visual objects using both labeled image data as well as semantic information gleaned from unannotated text. We demonstrate that this model matches state-of-the-art performance on the 1000-class ImageNet object recognition challenge while making more semantically reasonable errors, and also show that the semantic information can be exploited to make predictions about tens of thousands of image labels not observed during training. Semantic knowledge improves such zero-shot predictions achieving hit rates of up to 18% across thousands of novel labels never seen by the visual model.
+   Citation Count: 2601
+
+You would then reply:
+{
+   "reason": "Given that the paper with id e74f9b7f8eec6ba4704c206b93bc8079af3da4bd matches exactly what we’re looking for, we’ll do a find keyword in text to make sure.",
+   "action": {
+      "name": "find_in_text",
+      "paper_id": "e74f9b7f8eec6ba4704c206b93bc8079af3da4bd",
+      "query": "ImageNet"
+   }
+}
+
+You would then receive the following input:
+The ImageNet Large Scale Visual Recognition Challenge is a benchmark in object category classification and detection on hundreds of object categories and millions of images.
+
+You would then reply:
+{
+   "reason": "Given that the paper with id e74f9b7f8eec6ba4704c206b93bc8079af3da4bd matches exactly what we’re looking for, we’ll select it and end our search.",
+   "action": {
+      "name": "select",
+      "paper_id": "e74f9b7f8eec6ba4704c206b93bc8079af3da4bd"
+   }
+}

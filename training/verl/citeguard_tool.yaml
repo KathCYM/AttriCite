@@ -1,0 +1,27 @@
+tools:
+  - class_name: training.verl.citeguard_tool.CiteGuardTool
+    config:
+      type: native
+      search_limit: 10
+      title_threshold: 0.80
+    tool_schema:
+      type: function
+      function:
+        name: citeguard
+        description: Use the same citation-retrieval actions as the CiteGuard inference agent. At most five calls total.
+        parameters:
+          type: object
+          properties:
+            action:
+              type: string
+              enum: [search_relevance, search_citation_count, search_text_snippet, read, find_in_text, ask_for_more_context, select]
+            query:
+              type: string
+              description: Search query; required for either search action.
+            paper_id:
+              type: string
+              description: A returned paper ID; required for read, find_in_text, and select.
+            paper_title:
+              type: string
+              description: Source paper title; used by ask_for_more_context.
+          required: [action]
