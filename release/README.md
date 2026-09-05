@@ -6,7 +6,7 @@ and passage-derived discoverability queries.
 
 ## Contents
 
-- `citealign_metadata.jsonl`: 7,751 metadata records (7,608 computer-science
+- `citealign_metadata.jsonl`: 7,750 metadata records (7,607 computer-science
   records and the deduplicated 143-record biomedical evaluation set).
 - `splits/train_ids.txt`: 350 stable release IDs.
 - `splits/validation_ids.txt`: 60 stable release IDs.

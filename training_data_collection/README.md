@@ -285,6 +285,20 @@ The collector writes:
 - a JSONL audit file with the raw sentence, raw reference text, Semantic Scholar
   resolution details, and discoverability metadata
 
+## Final training bundles
+
+The release includes two ready-to-use, post-adjudication split bundles:
+
+- `splits/final_small/`: 350 training, 60 validation, and 299 test examples
+- `splits/final_1k/`: 1,000 training, 200 validation, and 299 test examples
+
+Both bundles use the same finalized 299-example main test set. Every row carries
+the corrected canonical `target_paper_title`, a stable `target_paper_id`, and a
+`release_id`. The bundles have been checked for exact normalized overlap in
+passages, source-paper titles, and target-paper titles across train, validation,
+and test. The machine-readable results are in
+`splits/final_training_bundles_validation.json`.
+
 ## Notes
 
 - The collector defaults to `fieldsOfStudy="Computer Science"` and accepts

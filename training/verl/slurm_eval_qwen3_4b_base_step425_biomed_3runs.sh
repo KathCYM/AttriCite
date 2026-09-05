@@ -10,14 +10,21 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+if [[ -n "${PROJECT_ROOT:-}" ]]; then
+  PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
+elif [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
+  PROJECT_ROOT="$(cd "$SLURM_SUBMIT_DIR" && pwd)"
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 VERL_VENV="${VERL_VENV:-$PROJECT_ROOT/verl/.venv}"
 TEST_DATA="${TEST_DATA:-$PROJECT_ROOT/training_data_collection/splits/test_2025_biomed.csv}"
-RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/results/biomed_temperature_sampling}"
+RESULT_DIR="${RESULT_DIR:-$PROJECT_ROOT/results/biomed_temperature_sampling_medicine}"
+FIELDS_OF_STUDY="${FIELDS_OF_STUDY:-Medicine}"
 
 BASE_MODEL="${BASE_MODEL:-Qwen/Qwen3-4B}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-qwen3_4b_full_grpo_json_fewshot_kl_n8_max5}"
-STEP="${STEP:-425}"
+STEP="${STEP:-475}"
 ACTOR_DIR="${ACTOR_DIR:-$PROJECT_ROOT/checkpoints/$EXPERIMENT_NAME/global_step_$STEP/actor}"
 MERGED_DIR="${MERGED_DIR:-$PROJECT_ROOT/checkpoints/$EXPERIMENT_NAME/global_step_$STEP/actor_hf}"
 
@@ -46,6 +53,7 @@ echo "Checkpoint actor: $ACTOR_DIR"
 echo "Merged checkpoint: $MERGED_DIR"
 echo "Temperature: $TEMPERATURE"
 echo "Runs per model: $NUM_RUNS"
+echo "Semantic Scholar field: $FIELDS_OF_STUDY"
 nvidia-smi -L
 
 if [[ ! -f "$TEST_DATA" ]]; then
@@ -151,6 +159,7 @@ run_three_evaluations() {
       --vllm_base_url "$VLLM_BASE_URL" \
       --temperature "$TEMPERATURE" \
       --max_actions "$MAX_ACTIONS" \
+      --fields_of_study "$FIELDS_OF_STUDY" \
       --no_interactive_context \
       2>&1 | tee "$eval_log"
 

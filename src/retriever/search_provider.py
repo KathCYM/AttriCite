@@ -13,7 +13,7 @@ class SearchProvider:
 class SemanticScholarSearchProvider(SearchProvider):
     def __init__(
         self,
-        fieldsOfStudy: str = "Computer Science",
+        fieldsOfStudy: str | None = "Computer Science",
         limit: int = 10,
         # sort: str = "citationCount:desc",
         only_open_access: bool = False,
@@ -21,7 +21,7 @@ class SemanticScholarSearchProvider(SearchProvider):
     ):
         # These fields are required for the PaperSearchResult model
         self.fields = (
-            "paperId,title,authors,venue,year,citationCount,abstract,openAccessPdf"
+            "paperId,externalIds,url,title,authors,venue,year,citationCount,abstract,openAccessPdf"
         )
         self.fieldsOfStudy = fieldsOfStudy
         self.limit = limit
@@ -127,14 +127,14 @@ class SemanticScholarSearchProvider(SearchProvider):
 class SemanticScholarWebSearchProvider(SearchProvider):
     def __init__(
         self,
-        fieldsOfStudy: str = "Computer Science",
+        fieldsOfStudy: str | None = "Computer Science",
         limit: int = 10,
         # sort: str = "citationCount:desc",
         only_open_access: bool = False,
     ):
         # These fields are required for the PaperSearchResult model
         self.fields = (
-            "paperId,title,authors,venue,year,citationCount,abstract,openAccessPdf"
+            "paperId,externalIds,url,title,authors,venue,year,citationCount,abstract,openAccessPdf"
         )
         self.fieldsOfStudy = fieldsOfStudy
         self.limit = limit

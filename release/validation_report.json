@@ -1,6 +1,6 @@
 {
   "biomedical_records": 143,
-  "computer_science_records": 7608,
+  "computer_science_records": 7607,
   "duplicate_release_ids": 0,
   "expected_split_counts": {
     "biomedical_test": 143,
@@ -8,7 +8,7 @@
     "train": 350,
     "validation": 60
   },
-  "fingerprint_scan_locators": 7751,
+  "fingerprint_scan_locators": 7750,
   "forbidden_fields_found": [],
   "full_dataset_audit": {
     "decision_counts": {
@@ -33,7 +33,7 @@
     "validation": 60
   },
   "split_counts_match": true,
-  "total_records": 7751,
+  "total_records": 7750,
   "year_counts": {
     "2024": 2401,
     "2025": 5350

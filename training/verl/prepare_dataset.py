@@ -3,11 +3,17 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 from datasets import Dataset
 
 from src.retriever.prompt_config import CITATION_HUMAN_INTRO
+from src.utils.entity_matcher import normalize_title
+
+
+ROOT = Path(__file__).resolve().parents[2]
+DEFAULT_METADATA = ROOT / "release" / "citealign_metadata.jsonl"
 
 
 JSON_FORMAT_INSTRUCTIONS = """Return exactly one JSON object with this structure:
@@ -39,14 +45,39 @@ def _system_prompt() -> str:
 SYSTEM_PROMPT = _system_prompt()
 
 
-def _records(csv_path: Path) -> list[dict]:
+def _target_ids(metadata_path: Path) -> dict[tuple[str, str], str]:
+    targets: dict[tuple[str, str], str] = {}
+    with metadata_path.open(encoding="utf-8") as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            key = (str(row["id"]), normalize_title(str(row.get("source_paper_title") or "")))
+            target_id = str(row.get("resolved_paper_id") or "").strip()
+            if target_id:
+                targets[key] = target_id
+    return targets
+
+
+def _records(csv_path: Path, metadata_path: Path = DEFAULT_METADATA) -> list[dict]:
     source = Dataset.from_csv(str(csv_path))
+    has_embedded_ids = "target_paper_id" in source.column_names
+    target_ids = {} if has_embedded_ids else _target_ids(metadata_path)
     rows: list[dict] = []
     for index, row in enumerate(source):
         excerpt = str(row["excerpt"])
         year = int(row["year"])
         source_title = str(row.get("source_paper_title") or "")
         target_title = str(row["target_paper_title"])
+        collection_id = str(row.get("original_id") or row.get("id", index))
+        target_id = str(row.get("target_paper_id") or "").strip()
+        if not target_id:
+            target_id = target_ids.get((collection_id, normalize_title(source_title)), "")
+        if not target_id:
+            raise ValueError(
+                f"No canonical target identifier for split row {row.get('id', index)} "
+                f"(collection id {collection_id})."
+            )
         rows.append(
             {
                 "data_source": "citeguard",
@@ -61,7 +92,7 @@ def _records(csv_path: Path) -> list[dict]:
                     },
                 ],
                 "ability": "citation_retrieval",
-                "reward_model": {"style": "rule", "ground_truth": target_title},
+                "reward_model": {"style": "rule", "ground_truth": target_id},
                 "extra_info": {
                     "index": index,
                     "row_id": str(row.get("id", index)),
@@ -73,6 +104,7 @@ def _records(csv_path: Path) -> list[dict]:
                                 "year": str(year),
                                 "source_title": source_title,
                                 "target_title": target_title,
+                                "target_id": target_id,
                             }
                         }
                     },
@@ -82,9 +114,9 @@ def _records(csv_path: Path) -> list[dict]:
     return rows
 
 
-def convert(csv_path: Path, output_path: Path) -> None:
+def convert(csv_path: Path, output_path: Path, metadata_path: Path = DEFAULT_METADATA) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    Dataset.from_list(_records(csv_path)).to_parquet(str(output_path))
+    Dataset.from_list(_records(csv_path, metadata_path)).to_parquet(str(output_path))
     print(f"Wrote {output_path}")
 
 
@@ -93,6 +125,7 @@ def main() -> None:
     parser.add_argument("--train-csv", type=Path, required=True)
     parser.add_argument("--validation-csv", type=Path, required=True)
     parser.add_argument("--test-csv", type=Path)
+    parser.add_argument("--metadata-jsonl", type=Path, default=DEFAULT_METADATA)
     parser.add_argument(
         "--output-dir",
         type=Path,
@@ -100,10 +133,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    convert(args.train_csv, args.output_dir / "train.parquet")
-    convert(args.validation_csv, args.output_dir / "validation.parquet")
+    convert(args.train_csv, args.output_dir / "train.parquet", args.metadata_jsonl)
+    convert(args.validation_csv, args.output_dir / "validation.parquet", args.metadata_jsonl)
     if args.test_csv is not None:
-        convert(args.test_csv, args.output_dir / "test_2025.parquet")
+        convert(args.test_csv, args.output_dir / "test_2025.parquet", args.metadata_jsonl)
 
 
 if __name__ == "__main__":

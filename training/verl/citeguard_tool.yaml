@@ -3,7 +3,6 @@ tools:
     config:
       type: native
       search_limit: 10
-      title_threshold: 0.80
     tool_schema:
       type: function
       function:

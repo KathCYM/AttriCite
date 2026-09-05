@@ -10,7 +10,13 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+if [[ -n "${PROJECT_ROOT:-}" ]]; then
+  PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
+elif [[ -n "${SLURM_SUBMIT_DIR:-}" ]]; then
+  PROJECT_ROOT="$(cd "$SLURM_SUBMIT_DIR" && pwd)"
+else
+  PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 VERL_VENV="${VERL_VENV:-$PROJECT_ROOT/verl/.venv}"
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-qwen3_4b_full_grpo_1k_val200_json_fewshot_kl_n8_max5}"
 DATA_DIR="${DATA_DIR:-$PROJECT_ROOT/training/verl/data_1k_val200}"

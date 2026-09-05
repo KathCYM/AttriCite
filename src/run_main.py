@@ -36,6 +36,7 @@ def run(args, console):
         "only_open_access": False,
         "use_web_search": False,
         "max_actions": int(getattr(args, "max_actions", 5)),
+        "fields_of_study": getattr(args, "fields_of_study", "Computer Science") or None,
     }
 
     prompt_name = "few_shot_tool"
@@ -99,6 +100,7 @@ def run(args, console):
         use_together=getattr(args, "use_together", False),
         vllm_base_url=getattr(args, "vllm_base_url", None),
         context_provider=context_provider,
+        fields_of_study=metadata["fields_of_study"],
     )
 
     results = []

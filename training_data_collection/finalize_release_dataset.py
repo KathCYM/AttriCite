@@ -159,8 +159,8 @@ def main() -> None:
     )
     print(json.dumps(report, indent=2, sort_keys=True))
     failed = (
-        report["total_records"] != 7751
-        or report["computer_science_records"] != 7608
+        report["total_records"] != 7750
+        or report["computer_science_records"] != 7607
         or report["biomedical_records"] != 143
         or report["year_counts"] != {"2024": 2401, "2025": 5350}
         or not report["split_counts_match"]

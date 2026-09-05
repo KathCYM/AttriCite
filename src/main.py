@@ -20,6 +20,12 @@ def main():
     parser.add_argument("--use_vllm", action="store_true", help="Use a vLLM OpenAI-compatible server instead of a hosted provider.")
     parser.add_argument("--use_together", action="store_true", help="Use Together AI for the specified model name.")
     parser.add_argument("--vllm_base_url", type=str, default=None, help="Base URL for the vLLM OpenAI-compatible server (default: http://localhost:8000/v1 or VLLM_BASE_URL).")
+    parser.add_argument(
+        "--fields_of_study",
+        type=str,
+        default="Computer Science",
+        help='Semantic Scholar field-of-study filter (for example, "Medicine"); use an empty string to disable it.',
+    )
 
     # single data point inputs
     parser.add_argument("--id", type=str, default="manual",

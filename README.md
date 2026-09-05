@@ -12,6 +12,11 @@ This anonymous review snapshot intentionally omits permanent paper, repository,
 dataset, and checkpoint URLs. Start with [RELEASE.md](RELEASE.md) for the
 paper-to-artifact map and release checklist.
 
+The completed independent finalized-pipeline audit is in
+[`audits/finalized_holdout_100`](audits/finalized_holdout_100): 99 of 100
+sampled records passed all checks, and the one failed extraction was excluded
+from the public metadata.
+
 ## Setup
 
 Run from the repository root.

@@ -15,6 +15,8 @@ class OpenAccessPdf(PydanticBaseModel):
 
 class PaperSearchResult(PydanticBaseModel):
     paperId: str | None
+    externalIds: dict[str, str | int] | None = None
+    url: str | None = None
     title: str
     authors: List[PaperAuthor]
     abstract: str | None

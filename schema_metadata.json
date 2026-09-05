@@ -2,7 +2,7 @@
   "@context": "http://schema.org",
   "@type": "Dataset",
   "name": "CiteAlign",
-  "description": "Metadata for 7,751 audited citation-recovery instances, including 7,608 computer-science instances and 143 biomedical test instances.",
+  "description": "Metadata for 7,750 audited citation-recovery instances, including 7,607 computer-science instances and 143 biomedical test instances.",
   "keywords": "citation recovery, scientific attribution, information retrieval, language models",
   "creator": {
     "@type": "Organization",

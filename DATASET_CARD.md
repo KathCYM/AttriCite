@@ -12,7 +12,7 @@ tags:
 # CiteAlign
 
 CiteAlign supports training and temporally separated evaluation of open-ended
-citation recovery. The full collection has 7,608 eligible instances from 2024
+citation recovery. The full collection has 7,607 eligible instances from 2024
 and 2025 ACL, CVPR, ICLR, ICML, and NeurIPS source papers. The experimental
 subset contains 350 training, 60 validation, and 299 test instances. A separate
 143-instance 2025 biomedical set is provided for cross-domain evaluation.

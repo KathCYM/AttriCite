@@ -16,18 +16,12 @@ from verl.tools.schemas import ToolResponse
 
 from src.retriever.observation_limits import MAX_ABSTRACT_CHARS, bound_observation
 from src.retriever.search_provider import SemanticScholarSearchProvider
+from src.utils.entity_matcher import identifier_matches
 
 
 class _SilentConsole:
     def log(self, *_args: Any, **_kwargs: Any) -> None:
         pass
-
-
-def title_matches(left: str, right: str, threshold: float = 0.8) -> bool:
-    return any(
-        SequenceMatcher(None, left.casefold(), candidate.casefold()).ratio() > threshold
-        for candidate in right.split("[TITLE_SEPARATOR]")
-    )
 
 
 def _extra_fields(agent_data: Any) -> dict:
@@ -87,7 +81,6 @@ class CiteGuardTool(BaseTool):
     def __init__(self, config: dict, tool_schema: Any):
         super().__init__(config, tool_schema)
         self.search_limit = int(config.get("search_limit", 10))
-        self.title_threshold = float(config.get("title_threshold", 0.8))
         self._instances: dict[str, dict] = {}
         self.provider = SemanticScholarSearchProvider(limit=self.search_limit, console=_SilentConsole())
 
@@ -106,6 +99,7 @@ class CiteGuardTool(BaseTool):
                 "year": initial.get("year"),
                 "source_title": initial.get("source_title", ""),
                 "target_title": initial.get("target_title", ""),
+                "target_id": str(initial.get("target_id") or ""),
                 "all_papers": {},
                 "latest_ids": [],
                 "actions": 0,
@@ -194,7 +188,7 @@ class CiteGuardTool(BaseTool):
             if paper is None:
                 return ToolResponse(text=f"Paper {paper_id} not found in the search buffer."), 0.0, {"invalid_paper_id": 1}
             state["selected"] = True
-            correct = title_matches(str(paper.get("title") or ""), state["target_title"], self.title_threshold)
+            correct = identifier_matches(paper, state["target_id"])
             state["correct_selection"] = bool(correct)
             return (
                 ToolResponse(text=f"Selection recorded: {paper.get('title')}. Stop now."),

@@ -192,6 +192,7 @@ class LLMSelfAskAgentPydantic(BaseAgent):
         use_together: bool = False,
         vllm_base_url: str | None = None,
         context_provider: ContextProvider | None = None,
+        fields_of_study: str | None = "Computer Science",
     ) -> None:
         self.prompt_template_path = self.prompts[prompt_name][0]
         self.human_intro = self.human_intros[self.prompts[prompt_name][1]]
@@ -206,11 +207,13 @@ class LLMSelfAskAgentPydantic(BaseAgent):
         self.parser = PydanticOutputParser(pydantic_object=pydantic_object)
         if use_web_search:
             self.search_provider = SemanticScholarWebSearchProvider(
+                fieldsOfStudy=fields_of_study,
                 limit=search_limit, only_open_access=only_open_access
             )
             self.search_provider.s2api.warmup()
         else:
             self.search_provider = SemanticScholarSearchProvider(
+                fieldsOfStudy=fields_of_study,
                 limit=search_limit, only_open_access=only_open_access, console=console
             )
         self.source_papers_title: List[str] = []
